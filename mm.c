@@ -41,12 +41,63 @@ team_t team = {
 /* rounds up to the nearest multiple of ALIGNMENT */
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)
 
-
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
+
+// 매크로 작성
+/* Basic constants and macros */
+// 워드, 헤더, 푸터의 사이즈를 4
+#define WSIZE 4
+// 더블 워드 사이즈를 8
+#define DSIZE 8
+
+// 힙을 확장 시 지정 - 4바이트
+#define DHUNKSIZE (1<<12)
+
+// 최대값 가져온다.
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+
+/* Pack a size and allocated bit into a word*/
+// 헤더와 푸터에 저장할 수 있는 값 리턴
+#define PACK(size, alloc) ((size) | (alloc))
+
+/* Read and write a word at address p */
+// 크기와 할당 비트를 통합해서 헤더와 푸터에 저장할 수 있는 값을 리턴한다.
+#define GET(p) (*(unsigned int *)(p))
+#define PUT(p, val) (*(unsigned int *)(p) = (val))
+
+/*Read the size and allocated fields from address p */
+// 주소 p의 헤더와 푸터의 크기와 할당 비트를 리턴한다.
+#define GET_SIZE(p) (GET(p) & ~0x7) // 뒤의 3비트를 제외하고 읽어 온다.
+#define GET_ALLOC(p) (GET(p) & 0x1) // 할당 가용을 확인한다.
+
+/* Given block ptr bp, compute address of its header and footer */
+// 각 블록의 헤더와 푸터를 가리키는 포인터를 리턴한다.
+#define HDRP(bp) ((char *)(bp) - WSIZE)
+#define FTRP(bp) ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
+
+/* Given block ptr bp, compute address of next and previous blocks */
+// 다음과 이전 블록 포인터를 각각 리턴한다.
+#define NEXT_BLKP(bp) ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE)))
+#define PREV_BLKP(bp) ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
+// 매크로 정의 완료
+
+
+// 할당기 자체는 사용자가 자신의 응용에서 컴파일하고 링크할 수 있는 소스 파일에 포함한다.
+extern int mm_init(void);
+extern void *mm_malloc(size_t size);
+extern void mm_free(void *ptr);
 
 /* 
  * mm_init - initialize the malloc package.
  */
+// 힙에 가용한 가상메모리를 큰 더블 워드 정렬된 바이트의 배열로 모델한 것.
+// mem_heap과 mem_brk 사이의 바이트들은 할당된 가상메모리를 나타낸다.
+// mem_brk 다음에 오는 바이트들은 미할당 가상메모리를 나타낸다.
+// 할당기는 mem_sbrk 함수를 호출해서 추가적인 힙 메모리를 요청하며, 
+// 이것은 힙을 축소하라는 요청을 거부하는 것만 제외하고는 
+// 시스템의 sbrk함수와 동일한 의미뿐만 아니라 동일한 인터페이스를 갖는다.
+// 할당기 자체는 사용자 자신의 응용에서 컴파일하고 링크할 수 있는 소스파일(mm.c)에 포함된다.
+// 할당기는 세 개의 함수를 응용 프로그램에 알려준다.
 int mm_init(void)
 {
     return 0;
@@ -73,6 +124,7 @@ void *mm_malloc(size_t size)
  */
 void mm_free(void *ptr)
 {
+    
 }
 
 /*
